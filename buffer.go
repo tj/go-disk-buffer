@@ -63,7 +63,7 @@ type Buffer struct {
 }
 
 // New buffer at `path`. The path given is used for the base
-// of the filenames created, which append ".<pid>.<id>".
+// of the filenames created, which append ".{pid}.{id}".
 func New(path string, config *Config) (*Buffer, error) {
 	b := &Buffer{
 		Config:    config,

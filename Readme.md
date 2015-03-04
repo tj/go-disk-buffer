@@ -23,7 +23,7 @@ Buffer represents a 1:N on-disk buffer.
 func New(path string, config *Config) (*Buffer, error)
 ```
 New buffer at `path`. The path given is used for the base of the filenames
-created, which append ".<pid>.<id>".
+created, which append ".{pid}.{id}".
 
 #### func (*Buffer) Bytes
 
