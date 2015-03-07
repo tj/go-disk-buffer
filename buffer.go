@@ -95,11 +95,9 @@ func (b *Buffer) open() error {
 	b.Lock()
 	defer b.Unlock()
 
-	if b.file != nil {
-		err := b.close()
-		if err != nil {
-			return err
-		}
+	err = b.close()
+	if err != nil {
+		return err
 	}
 
 	b.opened = time.Now()
@@ -198,6 +196,10 @@ func (b *Buffer) Bytes() int64 {
 
 // Close existing file after a rename.
 func (b *Buffer) close() error {
+	if b.file == nil {
+		return nil
+	}
+
 	path := b.file.Name()
 
 	err := os.Rename(path, path+".closed")
