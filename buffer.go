@@ -47,7 +47,7 @@ type Config struct {
 	FlushBytes    int64         // Flush after N bytes, zero to disable
 	FlushInterval time.Duration // Flush after duration, zero to disable
 	Queue         chan *Flush   // Queue of flushed files
-	Verbosity     int           // Verbosity level, 0-2
+	Verbosity     int           // Verbosity level, 0-3
 	Logger        *log.Logger   // Logger instance
 }
 
@@ -110,7 +110,7 @@ func (b *Buffer) open() error {
 
 // Write implements io.Writer.
 func (b *Buffer) Write(data []byte) (int, error) {
-	b.log(2, "write %s", data)
+	b.log(3, "write %s", data)
 
 	n, err := b.write(data)
 	if err != nil {
