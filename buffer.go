@@ -93,9 +93,6 @@ func New(path string, config *Config) (*Buffer, error) {
 func (b *Buffer) open() error {
 	path := b.pathname()
 
-	b.Lock()
-	defer b.Unlock()
-
 	b.log(1, "opening %s", path)
 	f, err := os.Create(path)
 	if err != nil {
@@ -141,11 +138,11 @@ func (b *Buffer) Write(data []byte) (int, error) {
 	return n, err
 }
 
-// Close the underlying file.
-// TODO: flush
+// Close the underlying file after flushing.
 func (b *Buffer) Close() error {
 	b.Lock()
 	defer b.Unlock()
+	b.flush(Forced)
 	return b.file.Close()
 }
 
@@ -156,6 +153,8 @@ func (b *Buffer) Flush() error {
 
 // FlushReason flushes for the given reason and re-opens.
 func (b *Buffer) FlushReason(reason Reason) error {
+	b.Lock()
+	defer b.Unlock()
 	b.flush(reason)
 	return b.open()
 }
@@ -163,10 +162,7 @@ func (b *Buffer) FlushReason(reason Reason) error {
 // Flush for the given reason without re-open.
 func (b *Buffer) flush(reason Reason) {
 	b.log(1, "flushing (%s)", reason)
-
-	b.Lock()
-
-	flush := &Flush{
+	b.Queue <- &Flush{
 		Reason: reason,
 		Writes: b.writes,
 		Bytes:  b.bytes,
@@ -174,10 +170,6 @@ func (b *Buffer) flush(reason Reason) {
 		Path:   b.file.Name(),
 		Age:    time.Since(b.opened),
 	}
-
-	b.Queue <- flush
-
-	b.Unlock()
 }
 
 // Write with metrics.

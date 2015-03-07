@@ -11,9 +11,19 @@ var config = &Config{
 	Verbosity:     0,
 }
 
+func discard(b *Buffer) {
+	go func() {
+		for range b.Queue {
+
+		}
+	}()
+}
+
 func TestOpen(t *testing.T) {
 	b, err := New("/tmp/buffer", config)
 	assert.Equal(t, nil, err)
+
+	discard(b)
 
 	err = b.Close()
 	assert.Equal(t, nil, err)
@@ -22,6 +32,8 @@ func TestOpen(t *testing.T) {
 func TestWrite(t *testing.T) {
 	b, err := New("/tmp/buffer", config)
 	assert.Equal(t, nil, err)
+
+	discard(b)
 
 	n, err := b.Write([]byte("hello"))
 	assert.Equal(t, nil, err)
@@ -146,7 +158,6 @@ func BenchmarkWrite(t *testing.B) {
 
 // - bufio
 // - bench / race
-// - flush on close
 // - prefix logs with filename
 // - support zero value to ignore Flush* option
 // - examples
