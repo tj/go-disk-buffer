@@ -40,12 +40,12 @@ type Flush struct {
 
 // Config for disk buffer.
 type Config struct {
-	FlushWrites   int64
-	FlushBytes    int64
-	FlushInterval time.Duration
-	Queue         chan *Flush
-	Verbosity     int
-	Logger        *log.Logger
+	FlushWrites   int64         // Flush after N writes, zero to disable
+	FlushBytes    int64         // Flush after N bytes, zero to disable
+	FlushInterval time.Duration // Flush after duration, zero to disable
+	Queue         chan *Flush   // Queue of flushed files
+	Verbosity     int           // Verbosity level, 0-2
+	Logger        *log.Logger   // Logger instance
 }
 
 // Buffer represents a 1:N on-disk buffer.
