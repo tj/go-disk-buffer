@@ -19,6 +19,17 @@ func discard(b *Buffer) {
 	}()
 }
 
+func write(buffer *Buffer, n int, b []byte) {
+	go func() {
+		for i := 0; i < n; i++ {
+			_, err := buffer.Write(b)
+			if err != nil {
+				panic(err)
+			}
+		}
+	}()
+}
+
 func TestOpen(t *testing.T) {
 	b, err := New("/tmp/buffer", config)
 	assert.Equal(t, nil, err)
@@ -61,21 +72,7 @@ func TestFlushWrites(t *testing.T) {
 
 	assert.Equal(t, nil, err)
 
-	quit := make(chan bool)
-
-	go func() {
-		for {
-			select {
-			case <-quit:
-				return
-			default:
-				_, err := b.Write([]byte("hello"))
-				if err != nil {
-					t.Fatalf("error: %s", err)
-				}
-			}
-		}
-	}()
+	write(b, 25, []byte("hello"))
 
 	flush := <-b.Queue
 	assert.Equal(t, int64(10), flush.Writes)
@@ -87,7 +84,6 @@ func TestFlushWrites(t *testing.T) {
 	assert.Equal(t, int64(50), flush.Bytes)
 	assert.Equal(t, Writes, flush.Reason)
 
-	quit <- true
 	err = b.Close()
 	assert.Equal(t, nil, err)
 }
@@ -102,20 +98,7 @@ func TestFlushBytes(t *testing.T) {
 
 	assert.Equal(t, nil, err)
 
-	quit := make(chan bool)
-
-	go func() {
-		for {
-			select {
-			case <-quit:
-				return
-			default:
-				_, err := b.Write([]byte("hello world"))
-				assert.Equal(t, nil, err)
-			}
-		}
-	}()
-
+	write(b, 250, []byte("hello world"))
 	flush := <-b.Queue
 	assert.Equal(t, int64(94), flush.Writes)
 	assert.Equal(t, int64(1034), flush.Bytes)
@@ -126,7 +109,7 @@ func TestFlushBytes(t *testing.T) {
 	assert.Equal(t, int64(1034), flush.Bytes)
 	assert.Equal(t, Bytes, flush.Reason)
 
-	quit <- true
+	discard(b)
 	err = b.Close()
 	assert.Equal(t, nil, err)
 }
