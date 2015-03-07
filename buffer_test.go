@@ -53,7 +53,9 @@ func TestFlushWrites(t *testing.T) {
 	go func() {
 		for i := 0; i < 22; i++ {
 			_, err := b.Write([]byte("hello"))
-			assert.Equal(t, nil, err)
+			if err != nil {
+				t.Fatalf("error: %s", err)
+			}
 		}
 	}()
 
