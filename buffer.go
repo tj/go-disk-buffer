@@ -150,8 +150,14 @@ func (b *Buffer) Flush() error {
 	return b.FlushReason(Forced)
 }
 
-// FlushReason flushes for the given reason.
+// FlushReason flushes for the given reason and re-opens.
 func (b *Buffer) FlushReason(reason Reason) error {
+	b.flush(reason)
+	return b.open()
+}
+
+// Flush for the given reason without re-open.
+func (b *Buffer) flush(reason Reason) {
 	b.log(1, "flushing (%s)", reason)
 
 	b.Lock()
@@ -168,8 +174,6 @@ func (b *Buffer) FlushReason(reason Reason) error {
 	b.Queue <- flush
 
 	b.Unlock()
-
-	return b.open()
 }
 
 // Write with metrics.
