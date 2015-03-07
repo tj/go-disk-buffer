@@ -134,6 +134,5 @@ func BenchmarkWrite(t *testing.B) {
 }
 
 // - bufio
-// - prefix logs with filename
 // - support zero value to ignore Flush* option
 // - interval

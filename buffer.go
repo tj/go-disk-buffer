@@ -80,7 +80,8 @@ func New(path string, config Config) (*Buffer, error) {
 	}
 
 	if b.Logger == nil {
-		b.Logger = log.New(os.Stderr, "buffer ", log.LstdFlags)
+		prefix := fmt.Sprintf("buffer #%d %q ", b.id, path)
+		b.Logger = log.New(os.Stderr, prefix, log.LstdFlags)
 	}
 
 	if b.Queue == nil {

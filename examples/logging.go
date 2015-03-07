@@ -9,7 +9,7 @@ func main() {
 		FlushWrites:   250,
 		FlushBytes:    1 << 20,
 		FlushInterval: 10 * time.Second,
-		Verbosity:     1,
+		Verbosity:     2,
 	})
 
 	if err != nil {
