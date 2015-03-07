@@ -93,14 +93,14 @@ func New(path string, config *Config) (*Buffer, error) {
 func (b *Buffer) open() error {
 	path := b.pathname()
 
+	b.Lock()
+	defer b.Unlock()
+
 	b.log(1, "opening %s", path)
 	f, err := os.Create(path)
 	if err != nil {
 		return err
 	}
-
-	b.Lock()
-	defer b.Unlock()
 
 	err = b.close()
 	if err != nil {
