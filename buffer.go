@@ -89,17 +89,12 @@ func New(path string, config *Config) (*Buffer, error) {
 	return b, b.open()
 }
 
-// Open a new buffer, closing the previous when present.
+// Open a new buffer.
 func (b *Buffer) open() error {
 	path := b.pathname()
 
 	b.log(1, "opening %s", path)
 	f, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-
-	err = b.close()
 	if err != nil {
 		return err
 	}
@@ -142,8 +137,7 @@ func (b *Buffer) Write(data []byte) (int, error) {
 func (b *Buffer) Close() error {
 	b.Lock()
 	defer b.Unlock()
-	b.flush(Forced)
-	return b.file.Close()
+	return b.flush(Forced)
 }
 
 // Flush forces a flush.
@@ -155,21 +149,13 @@ func (b *Buffer) Flush() error {
 func (b *Buffer) FlushReason(reason Reason) error {
 	b.Lock()
 	defer b.Unlock()
-	b.flush(reason)
-	return b.open()
-}
 
-// Flush for the given reason without re-open.
-func (b *Buffer) flush(reason Reason) {
-	b.log(1, "flushing (%s)", reason)
-	b.Queue <- &Flush{
-		Reason: reason,
-		Writes: b.writes,
-		Bytes:  b.bytes,
-		Opened: b.opened,
-		Path:   b.file.Name(),
-		Age:    time.Since(b.opened),
+	err := b.flush(reason)
+	if err != nil {
+		return err
 	}
+
+	return b.open()
 }
 
 // Write with metrics.
@@ -191,6 +177,27 @@ func (b *Buffer) Writes() int64 {
 // Bytes returns the number of bytes made to the current file.
 func (b *Buffer) Bytes() int64 {
 	return atomic.LoadInt64(&b.bytes)
+}
+
+// Flush for the given reason without re-open.
+func (b *Buffer) flush(reason Reason) error {
+	b.log(1, "flushing (%s)", reason)
+
+	err := b.close()
+	if err != nil {
+		return err
+	}
+
+	b.Queue <- &Flush{
+		Reason: reason,
+		Writes: b.writes,
+		Bytes:  b.bytes,
+		Opened: b.opened,
+		Path:   b.file.Name() + ".closed",
+		Age:    time.Since(b.opened),
+	}
+
+	return nil
 }
 
 // Close existing file after a rename.
