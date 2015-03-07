@@ -8,7 +8,7 @@ var config = &Config{
 	FlushWrites:   1000,
 	FlushBytes:    1000,
 	FlushInterval: time.Second,
-	Verbosity:     2,
+	Verbosity:     0,
 }
 
 func TestOpen(t *testing.T) {
@@ -49,11 +49,18 @@ func TestFlushWrites(t *testing.T) {
 
 	assert.Equal(t, nil, err)
 
+	quit := make(chan bool)
+
 	go func() {
-		for i := 0; i < 22; i++ {
-			_, err := b.Write([]byte("hello"))
-			if err != nil {
-				t.Fatalf("error: %s", err)
+		for {
+			select {
+			case <-quit:
+				return
+			default:
+				_, err := b.Write([]byte("hello"))
+				if err != nil {
+					t.Fatalf("error: %s", err)
+				}
 			}
 		}
 	}()
@@ -68,6 +75,7 @@ func TestFlushWrites(t *testing.T) {
 	assert.Equal(t, int64(50), flush.Bytes)
 	assert.Equal(t, Writes, flush.Reason)
 
+	quit <- true
 	err = b.Close()
 	assert.Equal(t, nil, err)
 }
@@ -82,10 +90,17 @@ func TestFlushBytes(t *testing.T) {
 
 	assert.Equal(t, nil, err)
 
+	quit := make(chan bool)
+
 	go func() {
-		for i := 0; i < 200; i++ {
-			_, err := b.Write([]byte("hello world"))
-			assert.Equal(t, nil, err)
+		for {
+			select {
+			case <-quit:
+				return
+			default:
+				_, err := b.Write([]byte("hello world"))
+				assert.Equal(t, nil, err)
+			}
 		}
 	}()
 
@@ -99,6 +114,7 @@ func TestFlushBytes(t *testing.T) {
 	assert.Equal(t, int64(1034), flush.Bytes)
 	assert.Equal(t, Bytes, flush.Reason)
 
+	quit <- true
 	err = b.Close()
 	assert.Equal(t, nil, err)
 }
