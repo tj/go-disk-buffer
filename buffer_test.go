@@ -143,11 +143,7 @@ func BenchmarkWrite(t *testing.B) {
 		t.Fatalf("error: %s", err)
 	}
 
-	go func() {
-		for range b.Queue {
-			// whoop
-		}
-	}()
+	discard(b)
 
 	t.ResetTimer()
 
