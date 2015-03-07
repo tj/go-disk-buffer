@@ -5,6 +5,7 @@ import "testing"
 import "time"
 
 var config = &Config{
+	Queue:         make(chan *Flush, 100),
 	FlushWrites:   1000,
 	FlushBytes:    1000,
 	FlushInterval: time.Second,
@@ -34,8 +35,6 @@ func TestOpen(t *testing.T) {
 	b, err := New("/tmp/buffer", config)
 	assert.Equal(t, nil, err)
 
-	discard(b)
-
 	err = b.Close()
 	assert.Equal(t, nil, err)
 }
@@ -43,8 +42,6 @@ func TestOpen(t *testing.T) {
 func TestWrite(t *testing.T) {
 	b, err := New("/tmp/buffer", config)
 	assert.Equal(t, nil, err)
-
-	discard(b)
 
 	n, err := b.Write([]byte("hello"))
 	assert.Equal(t, nil, err)
@@ -64,6 +61,7 @@ func TestWrite(t *testing.T) {
 
 func TestFlushWrites(t *testing.T) {
 	b, err := New("/tmp/buffer", &Config{
+		Queue:         make(chan *Flush, 100),
 		FlushWrites:   10,
 		FlushBytes:    1024,
 		FlushInterval: time.Second,
@@ -90,6 +88,7 @@ func TestFlushWrites(t *testing.T) {
 
 func TestFlushBytes(t *testing.T) {
 	b, err := New("/tmp/buffer", &Config{
+		Queue:         make(chan *Flush, 100),
 		FlushWrites:   10000,
 		FlushBytes:    1024,
 		FlushInterval: time.Second,
@@ -109,7 +108,6 @@ func TestFlushBytes(t *testing.T) {
 	assert.Equal(t, int64(1034), flush.Bytes)
 	assert.Equal(t, Bytes, flush.Reason)
 
-	discard(b)
 	err = b.Close()
 	assert.Equal(t, nil, err)
 }
