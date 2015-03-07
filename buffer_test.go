@@ -4,7 +4,7 @@ import "github.com/bmizerany/assert"
 import "testing"
 import "time"
 
-var config = &Config{
+var config = Config{
 	Queue:         make(chan *Flush, 100),
 	FlushWrites:   1000,
 	FlushBytes:    1000,
@@ -60,7 +60,7 @@ func TestWrite(t *testing.T) {
 }
 
 func TestFlushWrites(t *testing.T) {
-	b, err := New("/tmp/buffer", &Config{
+	b, err := New("/tmp/buffer", Config{
 		Queue:         make(chan *Flush, 100),
 		FlushWrites:   10,
 		FlushBytes:    1024,
@@ -87,7 +87,7 @@ func TestFlushWrites(t *testing.T) {
 }
 
 func TestFlushBytes(t *testing.T) {
-	b, err := New("/tmp/buffer", &Config{
+	b, err := New("/tmp/buffer", Config{
 		Queue:         make(chan *Flush, 100),
 		FlushWrites:   10000,
 		FlushBytes:    1024,
@@ -113,7 +113,7 @@ func TestFlushBytes(t *testing.T) {
 }
 
 func BenchmarkWrite(t *testing.B) {
-	b, err := New("/tmp/buffer", &Config{
+	b, err := New("/tmp/buffer", Config{
 		FlushWrites:   30000,
 		FlushBytes:    1 << 30,
 		FlushInterval: time.Minute,

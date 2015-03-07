@@ -5,7 +5,7 @@ import "time"
 import "log"
 
 func main() {
-	b, err := buffer.New("/tmp/pets", &buffer.Config{
+	b, err := buffer.New("/tmp/pets", buffer.Config{
 		FlushWrites:   250,
 		FlushBytes:    1 << 20,
 		FlushInterval: 10 * time.Second,
