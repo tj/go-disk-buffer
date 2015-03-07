@@ -37,6 +37,7 @@ type Flush struct {
 	Writes int64         `json:"writes"`
 	Bytes  int64         `json:"bytes"`
 	Opened time.Time     `json:"opened"`
+	Closed time.Time     `json:"closed"`
 	Age    time.Duration `json:"age"`
 }
 
@@ -193,6 +194,7 @@ func (b *Buffer) flush(reason Reason) error {
 		Writes: b.writes,
 		Bytes:  b.bytes,
 		Opened: b.opened,
+		Closed: time.Now(),
 		Path:   b.file.Name() + ".closed",
 		Age:    time.Since(b.opened),
 	}
