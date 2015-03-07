@@ -3,13 +3,32 @@ package buffer
 import "github.com/bmizerany/assert"
 import "testing"
 import "time"
-import "fmt"
 
-var config = &Config{
+var config = Config{
+	Queue:         make(chan *Flush, 100),
 	FlushWrites:   1000,
 	FlushBytes:    1000,
 	FlushInterval: time.Second,
 	Verbosity:     0,
+}
+
+func discard(b *Buffer) {
+	go func() {
+		for range b.Queue {
+
+		}
+	}()
+}
+
+func write(buffer *Buffer, n int, b []byte) {
+	go func() {
+		for i := 0; i < n; i++ {
+			_, err := buffer.Write(b)
+			if err != nil {
+				panic(err)
+			}
+		}
+	}()
 }
 
 func TestOpen(t *testing.T) {
@@ -41,7 +60,8 @@ func TestWrite(t *testing.T) {
 }
 
 func TestFlushWrites(t *testing.T) {
-	b, err := New("/tmp/buffer", &Config{
+	b, err := New("/tmp/buffer", Config{
+		Queue:         make(chan *Flush, 100),
 		FlushWrites:   10,
 		FlushBytes:    1024,
 		FlushInterval: time.Second,
@@ -50,21 +70,14 @@ func TestFlushWrites(t *testing.T) {
 
 	assert.Equal(t, nil, err)
 
-	go func() {
-		for i := 0; i < 22; i++ {
-			_, err := b.Write([]byte("hello"))
-			assert.Equal(t, nil, err)
-		}
-	}()
+	write(b, 25, []byte("hello"))
 
 	flush := <-b.Queue
-	assert.Equal(t, fmt.Sprintf("/tmp/buffer.%d.1", pid), flush.Path)
 	assert.Equal(t, int64(10), flush.Writes)
 	assert.Equal(t, int64(50), flush.Bytes)
 	assert.Equal(t, Writes, flush.Reason)
 
 	flush = <-b.Queue
-	assert.Equal(t, fmt.Sprintf("/tmp/buffer.%d.2", pid), flush.Path)
 	assert.Equal(t, int64(10), flush.Writes)
 	assert.Equal(t, int64(50), flush.Bytes)
 	assert.Equal(t, Writes, flush.Reason)
@@ -74,7 +87,8 @@ func TestFlushWrites(t *testing.T) {
 }
 
 func TestFlushBytes(t *testing.T) {
-	b, err := New("/tmp/buffer", &Config{
+	b, err := New("/tmp/buffer", Config{
+		Queue:         make(chan *Flush, 100),
 		FlushWrites:   10000,
 		FlushBytes:    1024,
 		FlushInterval: time.Second,
@@ -83,21 +97,13 @@ func TestFlushBytes(t *testing.T) {
 
 	assert.Equal(t, nil, err)
 
-	go func() {
-		for i := 0; i < 200; i++ {
-			_, err := b.Write([]byte("hello world"))
-			assert.Equal(t, nil, err)
-		}
-	}()
-
+	write(b, 250, []byte("hello world"))
 	flush := <-b.Queue
-	assert.Equal(t, fmt.Sprintf("/tmp/buffer.%d.1", pid), flush.Path)
 	assert.Equal(t, int64(94), flush.Writes)
 	assert.Equal(t, int64(1034), flush.Bytes)
 	assert.Equal(t, Bytes, flush.Reason)
 
 	flush = <-b.Queue
-	assert.Equal(t, fmt.Sprintf("/tmp/buffer.%d.2", pid), flush.Path)
 	assert.Equal(t, int64(94), flush.Writes)
 	assert.Equal(t, int64(1034), flush.Bytes)
 	assert.Equal(t, Bytes, flush.Reason)
@@ -107,7 +113,7 @@ func TestFlushBytes(t *testing.T) {
 }
 
 func BenchmarkWrite(t *testing.B) {
-	b, err := New("/tmp/buffer", &Config{
+	b, err := New("/tmp/buffer", Config{
 		FlushWrites:   30000,
 		FlushBytes:    1 << 30,
 		FlushInterval: time.Minute,
@@ -118,11 +124,7 @@ func BenchmarkWrite(t *testing.B) {
 		t.Fatalf("error: %s", err)
 	}
 
-	go func() {
-		for range b.Queue {
-			// whoop
-		}
-	}()
+	discard(b)
 
 	t.ResetTimer()
 
@@ -130,14 +132,3 @@ func BenchmarkWrite(t *testing.B) {
 		b.Write([]byte("hello world"))
 	}
 }
-
-// - bufio
-// - bench / race
-// - flush on close
-// - document thread safety
-// - document verbosity levels
-// - append '.closed'
-// - prefix logs with filename
-// - support zero value to ignore Flush* option
-// - examples
-// - interval

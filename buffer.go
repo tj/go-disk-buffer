@@ -1,9 +1,9 @@
-//
 // Package go-disk-buffer provides an io.Writer as a 1:N on-disk buffer,
 // publishing flushed files to a channel for processing.
 //
 // Files may be flushed via interval, write count, or byte size.
 //
+// All exported methods are thread-safe.
 package buffer
 
 import "sync/atomic"
@@ -15,6 +15,9 @@ import "os"
 
 // PID for unique filename.
 var pid = os.Getpid()
+
+// Ids for unique filename.
+var ids = int64(0)
 
 // Reason for flush.
 type Reason string
@@ -34,26 +37,28 @@ type Flush struct {
 	Writes int64         `json:"writes"`
 	Bytes  int64         `json:"bytes"`
 	Opened time.Time     `json:"opened"`
+	Closed time.Time     `json:"closed"`
 	Age    time.Duration `json:"age"`
 }
 
 // Config for disk buffer.
 type Config struct {
-	FlushWrites   int64
-	FlushBytes    int64
-	FlushInterval time.Duration
-	Queue         chan *Flush
-	Verbosity     int
-	Logger        *log.Logger
+	FlushWrites   int64         // Flush after N writes, zero to disable
+	FlushBytes    int64         // Flush after N bytes, zero to disable
+	FlushInterval time.Duration // Flush after duration, zero to disable
+	Queue         chan *Flush   // Queue of flushed files
+	Verbosity     int           // Verbosity level, 0-3
+	Logger        *log.Logger   // Logger instance
 }
 
 // Buffer represents a 1:N on-disk buffer.
 type Buffer struct {
-	*Config
+	Config
 
 	verbosity int
 	path      string
 	ids       int64
+	id        int64
 
 	sync.Mutex
 	opened time.Time
@@ -63,16 +68,20 @@ type Buffer struct {
 }
 
 // New buffer at `path`. The path given is used for the base
-// of the filenames created, which append ".{pid}.{id}".
-func New(path string, config *Config) (*Buffer, error) {
+// of the filenames created, which append ".{pid}.{id}.{fid}".
+func New(path string, config Config) (*Buffer, error) {
+	id := atomic.AddInt64(&ids, 1)
+
 	b := &Buffer{
 		Config:    config,
 		path:      path,
+		id:        id,
 		verbosity: 1,
 	}
 
 	if b.Logger == nil {
-		b.Logger = log.New(os.Stderr, "buffer ", log.LstdFlags)
+		prefix := fmt.Sprintf("buffer #%d %q ", b.id, path)
+		b.Logger = log.New(os.Stderr, prefix, log.LstdFlags)
 	}
 
 	if b.Queue == nil {
@@ -82,7 +91,7 @@ func New(path string, config *Config) (*Buffer, error) {
 	return b, b.open()
 }
 
-// Open a new buffer, closing the previous when present.
+// Open a new buffer.
 func (b *Buffer) open() error {
 	path := b.pathname()
 
@@ -90,13 +99,6 @@ func (b *Buffer) open() error {
 	f, err := os.Create(path)
 	if err != nil {
 		return err
-	}
-
-	b.Lock()
-	defer b.Unlock()
-
-	if b.file != nil {
-		b.file.Close()
 	}
 
 	b.opened = time.Now()
@@ -109,21 +111,21 @@ func (b *Buffer) open() error {
 
 // Write implements io.Writer.
 func (b *Buffer) Write(data []byte) (int, error) {
-	b.log(2, "write %s", data)
+	b.log(3, "write %s", data)
 
 	n, err := b.write(data)
 	if err != nil {
 		return n, err
 	}
 
-	if b.Writes() >= b.FlushWrites {
+	if b.FlushWrites != 0 && b.Writes() >= b.FlushWrites {
 		err := b.FlushReason(Writes)
 		if err != nil {
 			return n, err
 		}
 	}
 
-	if b.Bytes() >= b.FlushBytes {
+	if b.FlushBytes != 0 && b.Bytes() >= b.FlushBytes {
 		err := b.FlushReason(Bytes)
 		if err != nil {
 			return n, err
@@ -133,12 +135,11 @@ func (b *Buffer) Write(data []byte) (int, error) {
 	return n, err
 }
 
-// Close the underlying file.
-// TODO: flush
+// Close the underlying file after flushing.
 func (b *Buffer) Close() error {
 	b.Lock()
 	defer b.Unlock()
-	return b.file.Close()
+	return b.flush(Forced)
 }
 
 // Flush forces a flush.
@@ -146,24 +147,15 @@ func (b *Buffer) Flush() error {
 	return b.FlushReason(Forced)
 }
 
-// FlushReason flushes for the given reason.
+// FlushReason flushes for the given reason and re-opens.
 func (b *Buffer) FlushReason(reason Reason) error {
-	b.log(1, "flushing (%s)", reason)
-
 	b.Lock()
+	defer b.Unlock()
 
-	flush := &Flush{
-		Reason: reason,
-		Writes: b.writes,
-		Bytes:  b.bytes,
-		Opened: b.opened,
-		Path:   b.file.Name(),
-		Age:    time.Since(b.opened),
+	err := b.flush(reason)
+	if err != nil {
+		return err
 	}
-
-	b.Queue <- flush
-
-	b.Unlock()
 
 	return b.open()
 }
@@ -189,14 +181,50 @@ func (b *Buffer) Bytes() int64 {
 	return atomic.LoadInt64(&b.bytes)
 }
 
-// Pathname for a new buffer.
-func (b *Buffer) pathname() string {
-	return fmt.Sprintf("%s.%d.%d", b.path, pid, b.id())
+// Flush for the given reason without re-open.
+func (b *Buffer) flush(reason Reason) error {
+	b.log(1, "flushing (%s)", reason)
+
+	err := b.close()
+	if err != nil {
+		return err
+	}
+
+	b.Queue <- &Flush{
+		Reason: reason,
+		Writes: b.writes,
+		Bytes:  b.bytes,
+		Opened: b.opened,
+		Closed: time.Now(),
+		Path:   b.file.Name() + ".closed",
+		Age:    time.Since(b.opened),
+	}
+
+	return nil
 }
 
-// Id for a new buffer.
-func (b *Buffer) id() int64 {
-	return atomic.AddInt64(&b.ids, 1)
+// Close existing file after a rename.
+func (b *Buffer) close() error {
+	if b.file == nil {
+		return nil
+	}
+
+	path := b.file.Name()
+
+	b.log(2, "renaming %q", path)
+	err := os.Rename(path, path+".closed")
+	if err != nil {
+		return err
+	}
+
+	b.log(2, "closing %q", path)
+	return b.file.Close()
+}
+
+// Pathname for a new buffer.
+func (b *Buffer) pathname() string {
+	fid := atomic.AddInt64(&b.ids, 1)
+	return fmt.Sprintf("%s.%d.%d.%d", b.path, pid, b.id, fid)
 }
 
 // Log helper.
