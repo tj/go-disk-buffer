@@ -132,7 +132,3 @@ func BenchmarkWrite(t *testing.B) {
 		b.Write([]byte("hello world"))
 	}
 }
-
-// - bufio
-// - support zero value to ignore Flush* option
-// - interval
