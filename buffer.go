@@ -91,24 +91,6 @@ func New(path string, config Config) (*Buffer, error) {
 	return b, b.open()
 }
 
-// Open a new buffer.
-func (b *Buffer) open() error {
-	path := b.pathname()
-
-	b.log(1, "opening %s", path)
-	f, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-
-	b.opened = time.Now()
-	b.writes = 0
-	b.bytes = 0
-	b.file = f
-
-	return nil
-}
-
 // Write implements io.Writer.
 func (b *Buffer) Write(data []byte) (int, error) {
 	b.log(3, "write %s", data)
@@ -160,6 +142,34 @@ func (b *Buffer) FlushReason(reason Reason) error {
 	return b.open()
 }
 
+// Writes returns the number of writes made to the current file.
+func (b *Buffer) Writes() int64 {
+	return atomic.LoadInt64(&b.writes)
+}
+
+// Bytes returns the number of bytes made to the current file.
+func (b *Buffer) Bytes() int64 {
+	return atomic.LoadInt64(&b.bytes)
+}
+
+// Open a new buffer.
+func (b *Buffer) open() error {
+	path := b.pathname()
+
+	b.log(1, "opening %s", path)
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+
+	b.opened = time.Now()
+	b.writes = 0
+	b.bytes = 0
+	b.file = f
+
+	return nil
+}
+
 // Write with metrics.
 func (b *Buffer) write(data []byte) (int, error) {
 	b.Lock()
@@ -169,16 +179,6 @@ func (b *Buffer) write(data []byte) (int, error) {
 	b.bytes += int64(len(data))
 
 	return b.file.Write(data)
-}
-
-// Writes returns the number of writes made to the current file.
-func (b *Buffer) Writes() int64 {
-	return atomic.LoadInt64(&b.writes)
-}
-
-// Bytes returns the number of bytes made to the current file.
-func (b *Buffer) Bytes() int64 {
-	return atomic.LoadInt64(&b.bytes)
 }
 
 // Flush for the given reason without re-open.
