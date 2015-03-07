@@ -117,14 +117,14 @@ func (b *Buffer) Write(data []byte) (int, error) {
 		return n, err
 	}
 
-	if b.Writes() >= b.FlushWrites {
+	if b.FlushWrites != 0 && b.Writes() >= b.FlushWrites {
 		err := b.FlushReason(Writes)
 		if err != nil {
 			return n, err
 		}
 	}
 
-	if b.Bytes() >= b.FlushBytes {
+	if b.FlushBytes != 0 && b.Bytes() >= b.FlushBytes {
 		err := b.FlushReason(Bytes)
 		if err != nil {
 			return n, err
