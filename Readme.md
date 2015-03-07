@@ -1,7 +1,11 @@
 # buffer
 
 Package go-disk-buffer provides an io.Writer as a 1:N on-disk buffer, publishing
-flushed files to a channel for processing. Files may be flushed via interval, write count, or byte size.
+flushed files to a channel for processing.
+
+Files may be flushed via interval, write count, or byte size.
+
+All exported methods are thread-safe.
 
 ## Usage
 
@@ -9,7 +13,7 @@ flushed files to a channel for processing. Files may be flushed via interval, wr
 
 ```go
 type Buffer struct {
-	*Config
+	Config
 
 	sync.Mutex
 }
@@ -20,10 +24,10 @@ Buffer represents a 1:N on-disk buffer.
 #### func  New
 
 ```go
-func New(path string, config *Config) (*Buffer, error)
+func New(path string, config Config) (*Buffer, error)
 ```
 New buffer at `path`. The path given is used for the base of the filenames
-created, which append ".{pid}.{id}".
+created, which append ".{pid}.{id}.{fid}".
 
 #### func (*Buffer) Bytes
 
@@ -37,7 +41,7 @@ Bytes returns the number of bytes made to the current file.
 ```go
 func (b *Buffer) Close() error
 ```
-Close the underlying file. TODO: flush
+Close the underlying file after flushing.
 
 #### func (*Buffer) Flush
 
@@ -51,7 +55,7 @@ Flush forces a flush.
 ```go
 func (b *Buffer) FlushReason(reason Reason) error
 ```
-FlushReason flushes for the given reason.
+FlushReason flushes for the given reason and re-opens.
 
 #### func (*Buffer) Write
 
@@ -71,12 +75,12 @@ Writes returns the number of writes made to the current file.
 
 ```go
 type Config struct {
-	FlushWrites   int64
-	FlushBytes    int64
-	FlushInterval time.Duration
-	Queue         chan *Flush
-	Verbosity     int
-	Logger        *log.Logger
+	FlushWrites   int64         // Flush after N writes, zero to disable
+	FlushBytes    int64         // Flush after N bytes, zero to disable
+	FlushInterval time.Duration // Flush after duration, zero to disable
+	Queue         chan *Flush   // Queue of flushed files
+	Verbosity     int           // Verbosity level, 0-3
+	Logger        *log.Logger   // Logger instance
 }
 ```
 
@@ -91,6 +95,7 @@ type Flush struct {
 	Writes int64         `json:"writes"`
 	Bytes  int64         `json:"bytes"`
 	Opened time.Time     `json:"opened"`
+	Closed time.Time     `json:"closed"`
 	Age    time.Duration `json:"age"`
 }
 ```
