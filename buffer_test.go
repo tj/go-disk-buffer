@@ -8,7 +8,7 @@ var config = &Config{
 	FlushWrites:   1000,
 	FlushBytes:    1000,
 	FlushInterval: time.Second,
-	Verbosity:     0,
+	Verbosity:     2,
 }
 
 func TestOpen(t *testing.T) {

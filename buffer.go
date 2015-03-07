@@ -209,11 +209,13 @@ func (b *Buffer) close() error {
 
 	path := b.file.Name()
 
+	b.log(2, "renaming %q", path)
 	err := os.Rename(path, path+".closed")
 	if err != nil {
 		return err
 	}
 
+	b.log(2, "closing %q", path)
 	return b.file.Close()
 }
 
