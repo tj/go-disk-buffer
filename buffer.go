@@ -1,4 +1,3 @@
-//
 // Package go-disk-buffer provides an io.Writer as a 1:N on-disk buffer,
 // publishing flushed files to a channel for processing.
 //
