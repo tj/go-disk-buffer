@@ -4,6 +4,7 @@
 //
 // Files may be flushed via interval, write count, or byte size.
 //
+// All exported methods are thread-safe.
 package buffer
 
 import "sync/atomic"
