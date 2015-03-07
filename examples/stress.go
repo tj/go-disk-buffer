@@ -42,6 +42,6 @@ func main() {
 		log.Fatalf("error closing: %s", err)
 	}
 
-	log.Printf("ops: %d total, %d per, %d conncurrent", ops, per, con)
+	log.Printf("ops: %d total, %d per, %d concurrent", ops, per, con)
 	log.Printf("duration: %s", time.Since(start))
 }
