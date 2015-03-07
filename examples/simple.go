@@ -1,6 +1,7 @@
 package main
 
 import "github.com/tj/go-disk-buffer"
+import "io/ioutil"
 import "time"
 import "log"
 
@@ -18,7 +19,14 @@ func main() {
 
 	go func() {
 		for file := range b.Queue {
-			log.Printf("flushed %v", file)
+			log.Printf("flushed %s", file)
+
+			b, err := ioutil.ReadFile(file.Path)
+			if err != nil {
+				log.Fatalf("error reading: %s", err)
+			}
+
+			log.Printf("%q is %d bytes", file.Path, len(b))
 		}
 	}()
 
