@@ -16,6 +16,9 @@ import "os"
 // PID for unique filename.
 var pid = os.Getpid()
 
+// Ids for unique filename.
+var ids = int64(0)
+
 // Reason for flush.
 type Reason string
 
@@ -54,6 +57,7 @@ type Buffer struct {
 	verbosity int
 	path      string
 	ids       int64
+	id        int64
 
 	sync.Mutex
 	opened time.Time
@@ -63,11 +67,14 @@ type Buffer struct {
 }
 
 // New buffer at `path`. The path given is used for the base
-// of the filenames created, which append ".{pid}.{id}".
+// of the filenames created, which append ".{pid}.{id}.{fid}".
 func New(path string, config *Config) (*Buffer, error) {
+	id := atomic.AddInt64(&ids, 1)
+
 	b := &Buffer{
 		Config:    config,
 		path:      path,
+		id:        id,
 		verbosity: 1,
 	}
 
@@ -212,12 +219,8 @@ func (b *Buffer) close() error {
 
 // Pathname for a new buffer.
 func (b *Buffer) pathname() string {
-	return fmt.Sprintf("%s.%d.%d", b.path, pid, b.id())
-}
-
-// Id for a new buffer.
-func (b *Buffer) id() int64 {
-	return atomic.AddInt64(&b.ids, 1)
+	fid := atomic.AddInt64(&b.ids, 1)
+	return fmt.Sprintf("%s.%d.%d.%d", b.path, pid, b.id, fid)
 }
 
 // Log helper.

@@ -3,7 +3,6 @@ package buffer
 import "github.com/bmizerany/assert"
 import "testing"
 import "time"
-import "fmt"
 
 var config = &Config{
 	FlushWrites:   1000,
@@ -60,13 +59,11 @@ func TestFlushWrites(t *testing.T) {
 	}()
 
 	flush := <-b.Queue
-	assert.Equal(t, fmt.Sprintf("/tmp/buffer.%d.1", pid), flush.Path)
 	assert.Equal(t, int64(10), flush.Writes)
 	assert.Equal(t, int64(50), flush.Bytes)
 	assert.Equal(t, Writes, flush.Reason)
 
 	flush = <-b.Queue
-	assert.Equal(t, fmt.Sprintf("/tmp/buffer.%d.2", pid), flush.Path)
 	assert.Equal(t, int64(10), flush.Writes)
 	assert.Equal(t, int64(50), flush.Bytes)
 	assert.Equal(t, Writes, flush.Reason)
@@ -93,13 +90,11 @@ func TestFlushBytes(t *testing.T) {
 	}()
 
 	flush := <-b.Queue
-	assert.Equal(t, fmt.Sprintf("/tmp/buffer.%d.1", pid), flush.Path)
 	assert.Equal(t, int64(94), flush.Writes)
 	assert.Equal(t, int64(1034), flush.Bytes)
 	assert.Equal(t, Bytes, flush.Reason)
 
 	flush = <-b.Queue
-	assert.Equal(t, fmt.Sprintf("/tmp/buffer.%d.2", pid), flush.Path)
 	assert.Equal(t, int64(94), flush.Writes)
 	assert.Equal(t, int64(1034), flush.Bytes)
 	assert.Equal(t, Bytes, flush.Reason)
