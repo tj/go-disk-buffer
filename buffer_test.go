@@ -136,7 +136,6 @@ func BenchmarkWrite(t *testing.B) {
 // - flush on close
 // - document thread safety
 // - document verbosity levels
-// - append '.closed'
 // - prefix logs with filename
 // - support zero value to ignore Flush* option
 // - examples

@@ -96,7 +96,10 @@ func (b *Buffer) open() error {
 	defer b.Unlock()
 
 	if b.file != nil {
-		b.file.Close()
+		err := b.close()
+		if err != nil {
+			return err
+		}
 	}
 
 	b.opened = time.Now()
@@ -187,6 +190,18 @@ func (b *Buffer) Writes() int64 {
 // Bytes returns the number of bytes made to the current file.
 func (b *Buffer) Bytes() int64 {
 	return atomic.LoadInt64(&b.bytes)
+}
+
+// Close existing file after a rename.
+func (b *Buffer) close() error {
+	path := b.file.Name()
+
+	err := os.Rename(path, path+".closed")
+	if err != nil {
+		return err
+	}
+
+	return b.file.Close()
 }
 
 // Pathname for a new buffer.
