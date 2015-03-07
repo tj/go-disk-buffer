@@ -137,5 +137,4 @@ func BenchmarkWrite(t *testing.B) {
 // - bench / race
 // - prefix logs with filename
 // - support zero value to ignore Flush* option
-// - examples
 // - interval
