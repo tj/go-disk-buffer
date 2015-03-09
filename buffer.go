@@ -7,6 +7,7 @@
 package buffer
 
 import "sync/atomic"
+import "bufio"
 import "sync"
 import "time"
 import "log"
@@ -71,6 +72,7 @@ type Buffer struct {
 	id        int64
 
 	sync.Mutex
+	buf    *bufio.Writer
 	opened time.Time
 	writes int64
 	bytes  int64
@@ -191,6 +193,7 @@ func (b *Buffer) open() error {
 		return err
 	}
 
+	b.buf = bufio.NewWriter(f)
 	b.opened = time.Now()
 	b.writes = 0
 	b.bytes = 0
@@ -207,7 +210,7 @@ func (b *Buffer) write(data []byte) (int, error) {
 	b.writes += 1
 	b.bytes += int64(len(data))
 
-	return b.file.Write(data)
+	return b.buf.Write(data)
 }
 
 // Flush for the given reason without re-open.
@@ -247,6 +250,12 @@ func (b *Buffer) close() error {
 
 	b.log(2, "renaming %q", path)
 	err := os.Rename(path, path+".closed")
+	if err != nil {
+		return err
+	}
+
+	b.log(2, "flushing %q", path)
+	err = b.buf.Flush()
 	if err != nil {
 		return err
 	}
