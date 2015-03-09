@@ -157,3 +157,25 @@ func BenchmarkWrite(t *testing.B) {
 		b.Write([]byte("hello world"))
 	}
 }
+
+func BenchmarkWriteBufio(t *testing.B) {
+	b, err := New("/tmp/buffer", Config{
+		FlushWrites:   30000,
+		FlushBytes:    1 << 30,
+		FlushInterval: time.Minute,
+		BufferSize:    1 << 10,
+		Verbosity:     0,
+	})
+
+	if err != nil {
+		t.Fatalf("error: %s", err)
+	}
+
+	discard(b)
+
+	t.ResetTimer()
+
+	for i := 0; i < t.N; i++ {
+		b.Write([]byte("hello world"))
+	}
+}

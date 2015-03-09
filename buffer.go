@@ -47,6 +47,7 @@ type Config struct {
 	FlushWrites   int64         // Flush after N writes, zero to disable
 	FlushBytes    int64         // Flush after N bytes, zero to disable
 	FlushInterval time.Duration // Flush after duration, zero to disable
+	BufferSize    int           // Buffer size for writes
 	Queue         chan *Flush   // Queue of flushed files
 	Verbosity     int           // Verbosity level, 0-3
 	Logger        *log.Logger   // Logger instance
@@ -193,7 +194,11 @@ func (b *Buffer) open() error {
 		return err
 	}
 
-	b.buf = bufio.NewWriter(f)
+	b.log(2, "buffer size %d", b.BufferSize)
+	if b.BufferSize != 0 {
+		b.buf = bufio.NewWriterSize(f, b.BufferSize)
+	}
+
 	b.opened = time.Now()
 	b.writes = 0
 	b.bytes = 0
@@ -210,7 +215,11 @@ func (b *Buffer) write(data []byte) (int, error) {
 	b.writes += 1
 	b.bytes += int64(len(data))
 
-	return b.buf.Write(data)
+	if b.BufferSize != 0 {
+		return b.buf.Write(data)
+	}
+
+	return b.file.Write(data)
 }
 
 // Flush for the given reason without re-open.
@@ -254,10 +263,12 @@ func (b *Buffer) close() error {
 		return err
 	}
 
-	b.log(2, "flushing %q", path)
-	err = b.buf.Flush()
-	if err != nil {
-		return err
+	if b.BufferSize != 0 {
+		b.log(2, "flushing %q", path)
+		err = b.buf.Flush()
+		if err != nil {
+			return err
+		}
 	}
 
 	b.log(2, "closing %q", path)
