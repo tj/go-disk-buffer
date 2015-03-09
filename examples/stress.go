@@ -25,7 +25,7 @@ func main() {
 	}()
 
 	ops := 5000000
-	con := 30
+	con := 80
 	per := ops / con
 	start := time.Now()
 
