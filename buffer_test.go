@@ -153,9 +153,11 @@ func BenchmarkWrite(t *testing.B) {
 
 	t.ResetTimer()
 
-	for i := 0; i < t.N; i++ {
-		b.Write([]byte("hello world"))
-	}
+	t.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			b.Write([]byte("hello world"))
+		}
+	})
 }
 
 func BenchmarkWriteBufio(t *testing.B) {
@@ -175,7 +177,9 @@ func BenchmarkWriteBufio(t *testing.B) {
 
 	t.ResetTimer()
 
-	for i := 0; i < t.N; i++ {
-		b.Write([]byte("hello world"))
-	}
+	t.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			b.Write([]byte("hello world"))
+		}
+	})
 }
