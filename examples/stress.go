@@ -10,6 +10,7 @@ func main() {
 		FlushWrites:   200000,
 		FlushBytes:    50 << 20,
 		FlushInterval: 15 * time.Second,
+		BufferSize:    5 << 10,
 		Verbosity:     0,
 	})
 
@@ -23,7 +24,7 @@ func main() {
 		}
 	}()
 
-	ops := 1000000
+	ops := 5000000
 	con := 30
 	per := ops / con
 	start := time.Now()
