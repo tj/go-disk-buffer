@@ -51,6 +51,16 @@ type Config struct {
 	Logger        *log.Logger   // Logger instance
 }
 
+// Validate the configuration.
+func (c *Config) Validate() error {
+	switch {
+	case c.FlushBytes == 0 && c.FlushWrites == 0 && c.FlushInterval == 0:
+		return fmt.Errorf("at least one flush mechanism must be non-zero")
+	default:
+		return nil
+	}
+}
+
 // Buffer represents a 1:N on-disk buffer.
 type Buffer struct {
 	Config
@@ -92,6 +102,11 @@ func New(path string, config Config) (*Buffer, error) {
 	if b.FlushInterval != 0 {
 		b.tick = time.NewTicker(config.FlushInterval)
 		go b.loop()
+	}
+
+	err := config.Validate()
+	if err != nil {
+		return nil, err
 	}
 
 	return b, b.open()

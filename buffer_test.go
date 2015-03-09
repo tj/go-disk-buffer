@@ -132,6 +132,11 @@ func TestFlushInterval(t *testing.T) {
 	assert.Equal(t, nil, err)
 }
 
+func TestConfigValidate(t *testing.T) {
+	_, err := New("/tmp/buffer", Config{})
+	assert.Equal(t, "at least one flush mechanism must be non-zero", err.Error())
+}
+
 func BenchmarkWrite(t *testing.B) {
 	b, err := New("/tmp/buffer", Config{
 		FlushWrites:   30000,
