@@ -124,10 +124,9 @@ func TestFlushInterval(t *testing.T) {
 	b.Write([]byte("hello world"))
 
 	flush := <-b.Queue
-	// assert.Equal(t, int64(94), flush.Writes)
-	// assert.Equal(t, int64(1034), flush.Bytes)
+	assert.Equal(t, int64(2), flush.Writes)
+	assert.Equal(t, int64(22), flush.Bytes)
 	assert.Equal(t, Interval, flush.Reason)
-	// TODO: don't flush when zero writes
 
 	err = b.Close()
 	assert.Equal(t, nil, err)
