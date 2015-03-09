@@ -112,6 +112,27 @@ func TestFlushBytes(t *testing.T) {
 	assert.Equal(t, nil, err)
 }
 
+func TestFlushInterval(t *testing.T) {
+	b, err := New("/tmp/buffer", Config{
+		Queue:         make(chan *Flush, 100),
+		FlushInterval: time.Second,
+	})
+
+	assert.Equal(t, nil, err)
+
+	b.Write([]byte("hello world"))
+	b.Write([]byte("hello world"))
+
+	flush := <-b.Queue
+	// assert.Equal(t, int64(94), flush.Writes)
+	// assert.Equal(t, int64(1034), flush.Bytes)
+	assert.Equal(t, Interval, flush.Reason)
+	// TODO: don't flush when zero writes
+
+	err = b.Close()
+	assert.Equal(t, nil, err)
+}
+
 func BenchmarkWrite(t *testing.B) {
 	b, err := New("/tmp/buffer", Config{
 		FlushWrites:   30000,

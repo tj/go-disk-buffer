@@ -65,6 +65,7 @@ type Buffer struct {
 	writes int64
 	bytes  int64
 	file   *os.File
+	tick   *time.Ticker
 }
 
 // New buffer at `path`. The path given is used for the base
@@ -86,6 +87,11 @@ func New(path string, config Config) (*Buffer, error) {
 
 	if b.Queue == nil {
 		b.Queue = make(chan *Flush)
+	}
+
+	if b.FlushInterval != 0 {
+		b.tick = time.NewTicker(config.FlushInterval)
+		go b.loop()
 	}
 
 	return b, b.open()
@@ -119,6 +125,7 @@ func (b *Buffer) Write(data []byte) (int, error) {
 
 // Close the underlying file after flushing.
 func (b *Buffer) Close() error {
+	b.tick.Stop()
 	b.Lock()
 	defer b.Unlock()
 	return b.flush(Forced)
@@ -150,6 +157,13 @@ func (b *Buffer) Writes() int64 {
 // Bytes returns the number of bytes made to the current file.
 func (b *Buffer) Bytes() int64 {
 	return atomic.LoadInt64(&b.bytes)
+}
+
+// Loop for flush interval.
+func (b *Buffer) loop() {
+	for range b.tick.C {
+		b.FlushReason(Interval)
+	}
 }
 
 // Open a new buffer.
@@ -184,6 +198,11 @@ func (b *Buffer) write(data []byte) (int, error) {
 // Flush for the given reason without re-open.
 func (b *Buffer) flush(reason Reason) error {
 	b.log(1, "flushing (%s)", reason)
+
+	if b.writes == 0 {
+		b.log(2, "nothing to flush")
+		return nil
+	}
 
 	err := b.close()
 	if err != nil {
