@@ -31,7 +31,8 @@ func write(buffer *Buffer, n int, b []byte) {
 	}()
 }
 
-func TestOpen(t *testing.T) {
+// Test immediate open / close.
+func TestBuffer_Open(t *testing.T) {
 	b, err := New("/tmp/buffer", config)
 	assert.Equal(t, nil, err)
 
@@ -39,7 +40,8 @@ func TestOpen(t *testing.T) {
 	assert.Equal(t, nil, err)
 }
 
-func TestWrite(t *testing.T) {
+// Test buffer writes.
+func TestBuffer_Write(t *testing.T) {
 	b, err := New("/tmp/buffer", config)
 	assert.Equal(t, nil, err)
 
@@ -59,7 +61,8 @@ func TestWrite(t *testing.T) {
 	assert.Equal(t, nil, err)
 }
 
-func TestFlushWrites(t *testing.T) {
+// Test flushing on write count.
+func TestBuffer_Write_FlushOnWrites(t *testing.T) {
 	b, err := New("/tmp/buffer", Config{
 		Queue:         make(chan *Flush, 100),
 		FlushWrites:   10,
@@ -86,7 +89,8 @@ func TestFlushWrites(t *testing.T) {
 	assert.Equal(t, nil, err)
 }
 
-func TestFlushBytes(t *testing.T) {
+// Test flushing on byte count.
+func TestBuffer_Write_FlushOnBytes(t *testing.T) {
 	b, err := New("/tmp/buffer", Config{
 		Queue:         make(chan *Flush, 100),
 		FlushWrites:   10000,
@@ -112,7 +116,8 @@ func TestFlushBytes(t *testing.T) {
 	assert.Equal(t, nil, err)
 }
 
-func TestFlushInterval(t *testing.T) {
+// Test flushing on interval.
+func TestBuffer_Write_FlushOnInterval(t *testing.T) {
 	b, err := New("/tmp/buffer", Config{
 		Queue:         make(chan *Flush, 100),
 		FlushInterval: time.Second,
@@ -132,12 +137,14 @@ func TestFlushInterval(t *testing.T) {
 	assert.Equal(t, nil, err)
 }
 
-func TestConfigValidate(t *testing.T) {
+// Test config validation.
+func TestConfig_Validate(t *testing.T) {
 	_, err := New("/tmp/buffer", Config{})
 	assert.Equal(t, "at least one flush mechanism must be non-zero", err.Error())
 }
 
-func BenchmarkWrite(t *testing.B) {
+// Benchmark buffer writes.
+func BenchmarkBuffer_Write(t *testing.B) {
 	b, err := New("/tmp/buffer", Config{
 		FlushWrites:   30000,
 		FlushBytes:    1 << 30,
@@ -160,7 +167,8 @@ func BenchmarkWrite(t *testing.B) {
 	})
 }
 
-func BenchmarkWriteBufio(t *testing.B) {
+// Benchmark buffer writes with bufio.
+func BenchmarkBuffer_Write_Bufio(t *testing.B) {
 	b, err := New("/tmp/buffer", Config{
 		FlushWrites:   30000,
 		FlushBytes:    1 << 30,
