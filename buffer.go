@@ -72,7 +72,7 @@ type Buffer struct {
 	ids       int64
 	id        int64
 
-	sync.Mutex
+	sync.RWMutex
 	buf    *bufio.Writer
 	opened time.Time
 	writes int64
@@ -119,20 +119,23 @@ func New(path string, config Config) (*Buffer, error) {
 func (b *Buffer) Write(data []byte) (int, error) {
 	b.log(3, "write %s", data)
 
+	b.Lock()
+	defer b.Unlock()
+
 	n, err := b.write(data)
 	if err != nil {
 		return n, err
 	}
 
-	if b.FlushWrites != 0 && b.Writes() >= b.FlushWrites {
-		err := b.FlushReason(Writes)
+	if b.FlushWrites != 0 && b.writes >= b.FlushWrites {
+		err := b.flush(Writes)
 		if err != nil {
 			return n, err
 		}
 	}
 
-	if b.FlushBytes != 0 && b.Bytes() >= b.FlushBytes {
-		err := b.FlushReason(Bytes)
+	if b.FlushBytes != 0 && b.bytes >= b.FlushBytes {
+		err := b.flush(Bytes)
 		if err != nil {
 			return n, err
 		}
@@ -143,44 +146,43 @@ func (b *Buffer) Write(data []byte) (int, error) {
 
 // Close the underlying file after flushing.
 func (b *Buffer) Close() error {
-	b.tick.Stop()
 	b.Lock()
 	defer b.Unlock()
+
+	if b.tick != nil {
+		b.tick.Stop()
+	}
+
 	return b.flush(Forced)
 }
 
 // Flush forces a flush.
 func (b *Buffer) Flush() error {
-	return b.FlushReason(Forced)
-}
-
-// FlushReason flushes for the given reason and re-opens.
-func (b *Buffer) FlushReason(reason Reason) error {
 	b.Lock()
 	defer b.Unlock()
-
-	err := b.flush(reason)
-	if err != nil {
-		return err
-	}
-
-	return b.open()
+	return b.flush(Forced)
 }
 
 // Writes returns the number of writes made to the current file.
 func (b *Buffer) Writes() int64 {
-	return atomic.LoadInt64(&b.writes)
+	b.RLock()
+	defer b.RUnlock()
+	return b.writes
 }
 
 // Bytes returns the number of bytes made to the current file.
 func (b *Buffer) Bytes() int64 {
-	return atomic.LoadInt64(&b.bytes)
+	b.RLock()
+	defer b.RUnlock()
+	return b.bytes
 }
 
 // Loop for flush interval.
 func (b *Buffer) loop() {
 	for range b.tick.C {
-		b.FlushReason(Interval)
+		b.Lock()
+		b.flush(Interval)
+		b.Unlock()
 	}
 }
 
@@ -199,6 +201,7 @@ func (b *Buffer) open() error {
 		b.buf = bufio.NewWriterSize(f, b.BufferSize)
 	}
 
+	b.log(2, "reset state")
 	b.opened = time.Now()
 	b.writes = 0
 	b.bytes = 0
@@ -209,9 +212,6 @@ func (b *Buffer) open() error {
 
 // Write with metrics.
 func (b *Buffer) write(data []byte) (int, error) {
-	b.Lock()
-	defer b.Unlock()
-
 	b.writes += 1
 	b.bytes += int64(len(data))
 
@@ -222,7 +222,7 @@ func (b *Buffer) write(data []byte) (int, error) {
 	return b.file.Write(data)
 }
 
-// Flush for the given reason without re-open.
+// Flush for the given reason and re-open.
 func (b *Buffer) flush(reason Reason) error {
 	b.log(1, "flushing (%s)", reason)
 
@@ -246,7 +246,7 @@ func (b *Buffer) flush(reason Reason) error {
 		Age:    time.Since(b.opened),
 	}
 
-	return nil
+	return b.open()
 }
 
 // Close existing file after a rename.

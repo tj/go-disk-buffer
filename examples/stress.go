@@ -7,8 +7,7 @@ import "log"
 
 func main() {
 	b, err := buffer.New("/tmp/pets", buffer.Config{
-		FlushWrites:   200000,
-		FlushBytes:    50 << 20,
+		FlushBytes:    20 << 20,
 		FlushInterval: 15 * time.Second,
 		BufferSize:    5 << 10,
 		Verbosity:     0,
@@ -20,11 +19,11 @@ func main() {
 
 	go func() {
 		for file := range b.Queue {
-			log.Printf("flushed %s", file)
+			log.Printf("flushed %+v", file)
 		}
 	}()
 
-	ops := 5000000
+	ops := 10000000
 	con := 80
 	per := ops / con
 	start := time.Now()
