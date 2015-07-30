@@ -13,9 +13,9 @@ All exported methods are thread-safe.
 
 ```go
 type Buffer struct {
-	Config
+	*Config
 
-	sync.Mutex
+	sync.RWMutex
 }
 ```
 
@@ -24,7 +24,7 @@ Buffer represents a 1:N on-disk buffer.
 #### func  New
 
 ```go
-func New(path string, config Config) (*Buffer, error)
+func New(path string, config *Config) (*Buffer, error)
 ```
 New buffer at `path`. The path given is used for the base of the filenames
 created, which append ".{pid}.{id}.{fid}".
@@ -50,13 +50,6 @@ func (b *Buffer) Flush() error
 ```
 Flush forces a flush.
 
-#### func (*Buffer) FlushReason
-
-```go
-func (b *Buffer) FlushReason(reason Reason) error
-```
-FlushReason flushes for the given reason and re-opens.
-
 #### func (*Buffer) Write
 
 ```go
@@ -78,6 +71,7 @@ type Config struct {
 	FlushWrites   int64         // Flush after N writes, zero to disable
 	FlushBytes    int64         // Flush after N bytes, zero to disable
 	FlushInterval time.Duration // Flush after duration, zero to disable
+	BufferSize    int           // Buffer size for writes
 	Queue         chan *Flush   // Queue of flushed files
 	Verbosity     int           // Verbosity level, 0-3
 	Logger        *log.Logger   // Logger instance
@@ -85,6 +79,13 @@ type Config struct {
 ```
 
 Config for disk buffer.
+
+#### func (*Config) Validate
+
+```go
+func (c *Config) Validate() error
+```
+Validate the configuration.
 
 #### type Flush
 
