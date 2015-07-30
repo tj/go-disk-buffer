@@ -65,7 +65,7 @@ func (c *Config) Validate() error {
 
 // Buffer represents a 1:N on-disk buffer.
 type Buffer struct {
-	Config
+	*Config
 
 	verbosity int
 	path      string
@@ -83,7 +83,7 @@ type Buffer struct {
 
 // New buffer at `path`. The path given is used for the base
 // of the filenames created, which append ".{pid}.{id}.{fid}".
-func New(path string, config Config) (*Buffer, error) {
+func New(path string, config *Config) (*Buffer, error) {
 	id := atomic.AddInt64(&ids, 1)
 
 	b := &Buffer{
