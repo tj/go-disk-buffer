@@ -1,11 +1,14 @@
 package main
 
-import "github.com/tj/go-disk-buffer"
-import "time"
-import "log"
+import (
+	"log"
+	"time"
+
+	"github.com/tj/go-disk-buffer"
+)
 
 func main() {
-	b, err := buffer.New("/tmp/pets", buffer.Config{
+	b, err := buffer.New("/tmp/pets", &buffer.Config{
 		FlushWrites:   250,
 		FlushBytes:    1 << 20,
 		FlushInterval: 10 * time.Second,

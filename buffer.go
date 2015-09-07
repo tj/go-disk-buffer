@@ -1,4 +1,4 @@
-// Package go-disk-buffer provides an io.Writer as a 1:N on-disk buffer,
+// Package buffer provides an io.Writer as a 1:N on-disk buffer,
 // publishing flushed files to a channel for processing.
 //
 // Files may be flushed via interval, write count, or byte size.
@@ -6,13 +6,15 @@
 // All exported methods are thread-safe.
 package buffer
 
-import "sync/atomic"
-import "bufio"
-import "sync"
-import "time"
-import "log"
-import "fmt"
-import "os"
+import (
+	"bufio"
+	"fmt"
+	"log"
+	"os"
+	"sync"
+	"sync/atomic"
+	"time"
+)
 
 // PID for unique filename.
 var pid = os.Getpid()
@@ -212,7 +214,7 @@ func (b *Buffer) open() error {
 
 // Write with metrics.
 func (b *Buffer) write(data []byte) (int, error) {
-	b.writes += 1
+	b.writes++
 	b.bytes += int64(len(data))
 
 	if b.BufferSize != 0 {

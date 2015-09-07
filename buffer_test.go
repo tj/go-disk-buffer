@@ -1,8 +1,11 @@
 package buffer
 
-import "github.com/bmizerany/assert"
-import "testing"
-import "time"
+import (
+	"testing"
+	"time"
+
+	"github.com/bmizerany/assert"
+)
 
 var config = &Config{
 	Queue:         make(chan *Flush, 100),
