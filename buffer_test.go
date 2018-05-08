@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bmizerany/assert"
+	"github.com/tj/assert"
 )
 
 var config = &Config{
